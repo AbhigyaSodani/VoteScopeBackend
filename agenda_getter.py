@@ -10,22 +10,40 @@ from nltk.stem.wordnet import WordNetLemmatizer
 from nltk import pos_tag
 import mysql.connector
 import asyncio
+from datetime import datetime
+def monthToNum(Month):
+    return {
+            'January': 1,
+            'February': 2,
+            'March': 3,
+            'April': 4,
+            'May': 5,
+            'June': 6,
+            'July': 7,
+            'August': 8,
+            'September': 9, 
+            'October': 10,
+            'November': 11,
+            'December': 12
+    }[Month]
+
 def main():
-    """
+   
+    
     db = mysql.connector.connect(user='databse', password='sgbat2001',
                                 host='34.132.108.122',
                                 database='polls')
     cursor = db.cursor()
-    add_poll = ("INSERT INTO polls (question, approve, no_opinion, disapprove) VALUES (%(question)s, %(approve)s, %(no_opinion)s, %(disapprove)s)")
-    """
+    add_poll = ("INSERT INTO polls (question, approve, no_opinion, disapprove, poll_date) VALUES (%(question)s, %(approve)s, %(no_opinion)s, %(disapprove)s, %(poll_date)s)")
+    
     while(True):
         # Instantiate options
         opts = Options()
         # opts.add_argument(" — headless") # Uncomment if the headless version needed
-        opts.binary_location = "C://Program Files (x86)//Google//Chrome//Application//chrome.exe"
+        opts.binary_location = "C://Program Files//Google//Chrome//Application//chrome.exe"
 
         # Set the location of the webdriver
-        chrome_driver = "C://Users//abhig//chromedriver_win32//chromedriver.exe"
+        chrome_driver = "C://Users//Abhigya Sodani//Downloads//chromedriver_win32//chromedriver.exe"
 
         # Instantiate a webdriver
         driver = webdriver.Chrome(options=opts, executable_path=chrome_driver)
@@ -41,8 +59,8 @@ def main():
         #p = re.compile('<td class="listItem"')
         #
         
-        print(arch_meetings.split('<td class="listItemUpcoming"')[1])
-        input()
+        arch_meetings= arch_meetings.split('<!--City Council Formal Meetings Table -->')[1].split("<!--City Council Closed Session -->")[0]
+       
         """
         all_upcoming_agendas = re.findall('<td class="listItemUpcoming" border-bottom:0px; headers="Name" scope="row">City Council Regular Meeting</td>',arch_meetings)
 
@@ -51,20 +69,27 @@ def main():
         
         input()
         """
-        all_agendas=re.findall('<td class="listItem" headers="Agenda City-Council-Adjourned-Regular-Meeting.*"><a href=".*" target="_blank">Agenda</a></td>',arch_meetings)
+        all_agendas=re.findall('<td class="listItem" headers="Agenda .*"><a href=".*" target="_blank">Agenda</a></td>',arch_meetings)
+        dates=re.findall('<td class="listItem" headers="Date .*"><span style="display:none;">.*</span>.*</td>',arch_meetings)
         agendas = []
+        all_dates=[]
+        for i in dates:
+            
+            all_dates.append(i.split("</span>")[1].split("</td>")[0].replace("&nbsp;"," "))
         for i in all_agendas:
             agendas.append(i.split('href="//')[1].split('"')[0].replace("amp;",""))
 
         print(agendas)
 
         comments=[]
+        counter=0
         for j in agendas:
-            print(j)
+            
             driver.get("http://"+j)   
             soup = BeautifulSoup(driver.page_source)
             soup = str(soup)
             data = re.findall('<span style="FONT-FAMILY: arial">Comment:.*<br/></span></span> <br/>',soup)
+           
             #print(re.findall('<blockquote dir="ltr" style="MARGIN-RIGHT=0px;"><div><a ',soup))
             #print(data)
             for k in data:
@@ -114,12 +139,21 @@ def main():
                 question = (' ').join(word_decomp) # Create a string to reform the question instead of word by word
                 if '?' not in question: # Ensures that ? is attached to end of the sentence
                     question = question + '?'
+                date_arr=str(all_dates[counter]).replace(u"\xa0",u" ").replace(","," ").split(" ")
+               
+                insert_question = {'question':question, 'approve':0, 'no_opinion':0, 'disapprove':0, 'poll_date':datetime(int(date_arr[3]),int(monthToNum(date_arr[0])),int(date_arr[1])).strftime('%Y-%m-%d')}
+            
+               
+                
+                
                 try:
-                    insert_question = {'question':question, 'approve':0, 'no_opinion':0, 'disapprove':0}
+                    
                     cursor.execute(add_poll, insert_question)
                     db.commit()
                 except:
                     pass
+            
+            counter+=1
         cursor.close()
         db.close()
         #await asyncio.sleep(300)
