@@ -63,10 +63,30 @@ def authenticate_user(username: str, password: str) -> dict:
     except:
         return None
 
-@app.route('/get_polls_many', methods=['POST'])
+@app.route('/get_polls_many_checked', methods=['POST'])
 def return_top_polls():
     data = request.json
-    cursor.execute("SELECT * FROM polls WHERE poll_date < %(poll_date)s", {"poll_date":data['poll_date']})
+    cursor.execute("SELECT * FROM polls WHERE poll_date < %(poll_date)s AND poll_date > %(poll_date)s AND checked=1", {"poll_date_start":data['poll_date_start'],"poll_date_end":data['poll_date_end']})
+    rv=cursor.fetchall()
+    if not rv:
+        return json.dumps({"return":0})
+    row_headers=[x[0] for x in cursor.description]
+    try:
+        json_data=[]
+        for result in rv:
+            json_data.append(dict(zip(row_headers,result)))
+            
+
+
+    except Exception as e:
+        print(e)
+    
+    return json.dumps(json_data,default=str)
+
+@app.route('/get_polls_many_all', methods=['POST'])
+def return_top_polls_all():
+    data = request.json
+    cursor.execute("SELECT * FROM polls WHERE poll_date < %(poll_date)s AND poll_date > %(poll_date)s", {"poll_date_start":data['poll_date_start'],"poll_date_end":data['poll_date_end']})
     rv=cursor.fetchall()
     if not rv:
         return json.dumps({"return":0})
@@ -86,7 +106,7 @@ def return_top_polls():
 @app.route('/get_poll', methods=['POST'])
 def return_poll_by_id():
     data = request.json
-    cursor.execute("SELECT * FROM polls WHERE id = %(poll_id)s", {"poll_id":data['poll_id']})
+    cursor.execute("SELECT * FROM polls WHERE id = %(poll_id)s AND checked=1", {"poll_id":data['poll_id']})
     rv=cursor.fetchall()
     if not rv:
         return json.dumps({"return":0})
@@ -103,11 +123,21 @@ def return_poll_by_id():
         print(e)
     
     
-    
+@app.route('/edit_poll', methods=['POST'])
+def edit():
+    data = request.json
+    try:
+        cursor.execute("UPDATE polls SET question=%(question)s WHERE id=%(poll_id)s", {"poll_id":data['poll_id'],"question":data['question']})
+        db.commit()
+        return json.dumps({"return":100})
+    except Exception as e:
+        print(e)
+        return json.dumps({"return":0})
+
 
 @app.route('/get_polls_singular', methods=['POST'])
 def return_singular_polls():
-    cursor.execute("SELECT * FROM polls.polls ORDER BY poll_date desc")
+    cursor.execute("SELECT * FROM polls.polls WHERE checked=1 ORDER BY poll_date desc")
     rv=cursor.fetchall()
     if not rv:
         return json.dumps({"return":0})
@@ -127,7 +157,7 @@ def return_singular_polls():
 @app.route('/get_poll_date', methods=['POST'])
 def return_date_polls():
     data = request.json
-    cursor.execute("SELECT * FROM polls WHERE poll_date = %(poll_date)s", {"poll_date":data['poll_date']})
+    cursor.execute("SELECT * FROM polls WHERE poll_date = %(poll_date)s AND checked=1", {"poll_date":data['poll_date']})
     rv=cursor.fetchall()
     if not rv:
         return json.dumps({"return":0})
@@ -148,10 +178,10 @@ def return_date_polls():
 @app.route('/add_polls', methods=['POST'])
 def add_polls():
      data = request.json
-     insert_question = {'question':data['question'] , 'approve':0, 'no_opinion':0, 'disapprove':0, 'poll_date':datetime.now().strftime('%Y-%m-%d')}
+     insert_question = {'question':data['question'] , 'approve':0, 'no_opinion':0, 'disapprove':0, 'poll_date':datetime.now().strftime('%Y-%m-%d'), 'checked':1}
      try:
         
-        cursor.execute("INSERT INTO polls (question, approve, no_opinion, disapprove, poll_date) VALUES (%(question)s, %(approve)s, %(no_opinion)s, %(disapprove)s, %(poll_date)s)",insert_question)
+        cursor.execute("INSERT INTO polls (question, approve, no_opinion, disapprove, poll_date, checked) VALUES (%(question)s, %(approve)s, %(no_opinion)s, %(disapprove)s, %(poll_date)s,%(checked)s)",insert_question)
         db.commit()
         return json.dumps({"return":100})
      except Exception as e:
@@ -172,11 +202,31 @@ def return_results():
         for result in rv:
             json_data.append(dict(zip(row_headers,result)))
             return json.dumps(json_data[0],default=str)
-            
+    except:
+        return json.dumps({"return":0})
+
+@app.route('/set_checked', methods=['POST'])
+def set_checked():
+    data = request.json
+    try:
+        cursor.execute("UPDATE polls SET checked=1 WHERE id=%(poll_id)s", {"poll_id":data['poll_id']})
+        db.commit()
+        return json.dumps({"return":100})
+    except:
+        return json.dumps({"return":0})
+
+@app.route('/set_unchecked', methods=['POST'])
+def set_unchecked():
+    data = request.json
+    try:
+        cursor.execute("UPDATE polls SET checked=0 WHERE id=%(poll_id)s", {"poll_id":data['poll_id']})
+        db.commit()
+        return json.dumps({"return":100})
+    except:
+        return json.dumps({"return":0})
 
 
-    except Exception as e:
-        print(e)
+    
     
 
 
