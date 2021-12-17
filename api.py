@@ -66,7 +66,7 @@ def authenticate_user(username: str, password: str) -> dict:
 @app.route('/get_polls_many_checked', methods=['POST'])
 def return_top_polls():
     data = request.json
-    cursor.execute("SELECT * FROM polls WHERE poll_date < %(poll_date)s AND poll_date > %(poll_date)s AND checked=1", {"poll_date_start":data['poll_date_start'],"poll_date_end":data['poll_date_end']})
+    cursor.execute("SELECT * FROM polls WHERE poll_date < %(poll_date_end)s AND poll_date > %(poll_date_start)s AND checked=1", {"poll_date_start":data['poll_date_start'],"poll_date_end":data['poll_date_end']})
     rv=cursor.fetchall()
     if not rv:
         return json.dumps({"return":0})
@@ -86,7 +86,7 @@ def return_top_polls():
 @app.route('/get_polls_many_all', methods=['POST'])
 def return_top_polls_all():
     data = request.json
-    cursor.execute("SELECT * FROM polls WHERE poll_date < %(poll_date)s AND poll_date > %(poll_date)s", {"poll_date_start":data['poll_date_start'],"poll_date_end":data['poll_date_end']})
+    cursor.execute("SELECT * FROM polls WHERE poll_date < %(poll_date_end)s AND poll_date > %(poll_date_start)s", {"poll_date_start":data['poll_date_start'],"poll_date_end":data['poll_date_end']})
     rv=cursor.fetchall()
     if not rv:
         return json.dumps({"return":0})
