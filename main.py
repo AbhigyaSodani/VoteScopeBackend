@@ -298,4 +298,4 @@ def api_login():
             return {"return": 100, "access_token": str(token), "token_type": "bearer"}
       else:
           return {"return": 0, "message": "Wrong credentials!"}
-app.run(host='0.0.0.0',port=8080, debug=True)
+app.run(host='127.0.0.1', port=8080, debug=True)
