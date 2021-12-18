@@ -63,6 +63,10 @@ def authenticate_user(username: str, password: str) -> dict:
     except:
         return None
 
+@app.route('/', methods=['POST'])
+def test():
+    return "test"
+  
 @app.route('/get_polls_many_checked', methods=['POST'])
 def return_top_polls():
     data = request.json
