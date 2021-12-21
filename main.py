@@ -284,9 +284,9 @@ def api_signup():
         # hash the password before storing it
 
         read = cursor.execute("INSERT INTO users(email,password,type) VALUES('"+str(data['email'])+"','"+str(generate_password_hash(str(data['password'])).decode('utf8'))+"','"+str(data['type'])+"')")
-        cursor.close()
+   
         db.commit()
-        db.close()
+        
         return {"return": 100, "message" : message}
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -302,4 +302,7 @@ def api_login():
             return {"return": 100, "access_token": str(token), "token_type": "bearer"}
       else:
           return {"return": 0, "message": "Wrong credentials!"}
+
 app.run()
+cursor.close()
+db.close()
