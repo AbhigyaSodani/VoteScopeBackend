@@ -44,7 +44,7 @@ def user_helper(user) -> dict:
 
 
 def authenticate_user(username: str, password: str) -> dict:
-    cursor.execute("select * from polls.users where email = "+str(username))
+    cursor.execute("select * from polls.users where email = '"+str(username)+"'")
     email=None
     password_real=None
     type_real=None
