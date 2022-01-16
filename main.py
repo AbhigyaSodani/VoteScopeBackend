@@ -44,7 +44,7 @@ def user_helper(user) -> dict:
 
 
 def authenticate_user(username: str, password: str) -> dict:
-    cursor.execute("select * from polls.users where email = 'abhigyasodani@gmail.com'")
+    cursor.execute("select * from polls.users where email = '"+str(username)+"'")
     email=None
     password_real=None
     type_real=None
@@ -284,9 +284,9 @@ def api_signup():
         # hash the password before storing it
 
         read = cursor.execute("INSERT INTO users(email,password,type) VALUES('"+str(data['email'])+"','"+str(generate_password_hash(str(data['password'])).decode('utf8'))+"','"+str(data['type'])+"')")
-        cursor.close()
+   
         db.commit()
-        db.close()
+        
         return {"return": 100, "message" : message}
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -302,4 +302,7 @@ def api_login():
             return {"return": 100, "access_token": str(token), "token_type": "bearer"}
       else:
           return {"return": 0, "message": "Wrong credentials!"}
-app.run(host='0.0.0.0', port=8080, debug=True)
+
+app.run()
+cursor.close()
+db.close()
