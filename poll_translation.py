@@ -12,11 +12,26 @@ from keras.layers.embeddings import Embedding
 from tensorflow.keras.optimizers import Adam
 from keras.losses import sparse_categorical_crossentropy
 from tensorflow.python.client import device_lib
+import numpy as np
 print(device_lib.list_local_devices())
 
 
 
 print('Dataset Loaded')
+
+def logits_to_text(logits, tokenizer):
+    """
+    Turn logits from a neural network into text using the tokenizer
+    :param logits: Logits from a neural network
+    :param tokenizer: Keras Tokenizer fit on the labels
+    :return: String that represents the text of the logits
+    """
+    index_to_words = {id: word for word, id in tokenizer.word_index.items()}
+    index_to_words[0] = '<PAD>'
+
+    return ' '.join([index_to_words[prediction] for prediction in np.argmax(logits, 1)])
+
+
 
 def tokenize(x):
     """
@@ -77,49 +92,51 @@ def lstm_model():
     comment_tokens=[]
     poll_tokens=[]
     for i in range(0,len(comments)):
-        comments[i].replace("\n","")
+        comments[i]=comments[i].replace("\n","")
+        comments[i]="START_ "+comments[i]+" _END"
         for k in comments[i].split(" "):
             if k not in comment_tokens:
                 comment_tokens.append(k)
         
-        polls[i].replace("\n","")
+        polls[i]=polls[i].replace("\n","").replace("?","")
+        polls[i]="START_ "+polls[i]+" _END"
         for j in polls[i].split(" "):
             if j not in poll_tokens:
                 poll_tokens.append(j)
+    
     comments,polls,comment_tokenizer,poll_tokenizer=preprocess(comments,polls)
     learning_rate = 0.01
     latent_dim = 256
     
-    encoder_inputs = Input(shape=(None, len(comment_tokens)+1))
-    encoder = LSTM(latent_dim, return_state=True)
-    encoder_outputs, state_h, state_c = encoder(encoder_inputs)
-    # We discard `encoder_outputs` and only keep the states.
-    encoder_states = [state_h, state_c]
-
-    # Set up the decoder, using `encoder_states` as initial state.
-    decoder_inputs = Input(shape=(None, len(poll_tokens)+1))
-    # We set up our decoder to return full output sequences,
-    # and to return internal states as well. We don't use the
-    # return states in the training model, but we will use them in inference.
-    decoder_lstm = LSTM(latent_dim, return_sequences=True, return_state=True)
-    decoder_outputs, _, _ = decoder_lstm(decoder_inputs,
-                                        initial_state=encoder_states)
-    decoder_dense = Dense( len(poll_tokens)+1, activation='softmax')
-    decoder_outputs = decoder_dense(decoder_outputs)
+    encoder_inputs = Input(shape=(len(comments[0]),1))
+    encoder = encoder_gru = GRU(len(comments[0]))(encoder_inputs)
+    encoder_outputs = Dense(latent_dim, activation="relu")(encoder_gru)
+    decoder_inputs = RepeatVector(len(polls[0]))(encoder_outputs)
+    decoder_gru = GRU(latent_dim, return_sequences=True)(decoder_inputs)
+    decoder_output = TimeDistributed(Dense(len(comment_tokens)+1, activation="softmax"))(decoder_gru)
 
     # Define the model that will turn
     # `encoder_input_data` & `decoder_input_data` into `decoder_target_data`
-    model = Model([encoder_inputs, decoder_inputs], decoder_outputs)
+    model = Model([encoder_inputs], decoder_output)
     model.compile(loss=sparse_categorical_crossentropy,
                  optimizer=Adam(learning_rate),
                  metrics=["accuracy"])
-    return model, comments, polls
+    return model, comments, polls, comment_tokenizer, poll_tokenizer
 
-lstm_rnn_model, comments, polls= lstm_model()
+lstm_rnn_model, comments, polls, comment_tokenizer, poll_tokenizer= lstm_model()
 lstm_rnn_model.summary()
+"""
 print()
 print(comments)
 print()
 print()
 print(polls)
-lstm_rnn_model.fit(comments, polls,  batch_size=1024, epochs=10, validation_split=0.2)
+"""
+a=input()
+if a=="t":
+    lstm_rnn_model.fit(comments, polls,  batch_size=1024, epochs=1000, validation_split=0.2)
+    lstm_rnn_model.save('model.h5')
+else:
+    lstm_rnn_model.load_weights("model.h5")
+    print(logits_to_text(comments[0],comment_tokenizer))
+    print(lstm_rnn_model.predict(np.reshape(comments[0],(102,1))).shape)
